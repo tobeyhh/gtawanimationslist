@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GTAW Animations</title>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#000000; --card:#000000; --ink:#f5efff; --muted:#a995c9;
+  --line:#35224f; --accent:#a678ff; --gold:#e8b51a; --err:#ff7a9c;
+  color-scheme:dark;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px); background:#000}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; line-height:1.5;
+  display:flex; justify-content:center; padding:32px 16px;
+}
+main{width:100%; max-width:480px}
+h1{
+  font-family:"Pacifico",cursive,"Brush Script MT",serif; font-weight:400;
+  font-size:clamp(2.4rem,9vw,3.4rem); margin:0 0 6px; text-align:center;
+  color:#fff; line-height:1.2;
+}
+h1 .w{color:var(--gold)}
+h1 .g{color:#fff}
+.sub{text-align:center; color:var(--muted); margin:0 0 24px}
+form{
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  padding:24px; display:grid; gap:18px;
+}
+label{display:grid; gap:6px; font-weight:600; font-size:.95rem}
+select,input{
+  font:inherit; font-weight:400; color:var(--ink); background:#000;
+  border:1.5px solid var(--line); border-radius:10px; padding:11px 12px; width:100%;
+}
+select:focus,input:focus,button:focus-visible{outline:3px solid var(--accent); outline-offset:1px; border-color:var(--accent)}
+.err{color:var(--err); font-size:.82rem; font-weight:400}
+button{
+  font:inherit; font-weight:700; cursor:pointer; border:0; border-radius:10px;
+  padding:12px 16px; background:var(--gold); color:#000;
+}
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.6;cursor:wait}
+#done{
+  display:none; margin-top:18px; background:var(--card); border:1px solid var(--line);
+  border-radius:14px; padding:18px; gap:10px;
+}
+#done.show{display:grid}
+#done h2{margin:0; font-size:1.05rem}
+#done pre{
+  margin:0; white-space:pre-wrap; word-break:break-word; font:inherit; font-size:.92rem;
+  background:#000; border:1px solid var(--line); border-radius:10px; padding:12px;
+}
+.row{display:flex; gap:10px; flex-wrap:wrap}
+.row button{flex:1; min-width:120px}
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="g">GTA</span><span class="w">W</span> Animations</h1>
+  <p class="sub">Submit an animation for the list.</p>
+
+  <form id="f" novalidate>
+    <label>Category
+      <select id="cat" required>
+        <option value="">Choose a category</option>
+        <option>Sit</option>
+        <option>Standing</option>
+        <option>Dancing</option>
+        <option>Laying</option>
+        <option>Walking</option>
+        <option>Leaning</option>
+        <option>Working</option>
+        <option>Emotes</option>
+        <option>Other</option>
+      </select>
+      <span class="err" id="e1"></span>
+    </label>
+
+    <label>Animation
+      <input id="anim" type="text" placeholder="e.g. /anim sit4" autocomplete="off" required>
+      <span class="err" id="e2"></span>
+    </label>
+
+    <label>Discord
+      <input id="disc" type="text" placeholder="username" autocomplete="off" required>
+      <span class="err" id="e3"></span>
+    </label>
+
+    <button type="submit">Submit animation</button>
+  </form>
+
+  <section id="done" aria-live="polite">
+    <h2 id="doneTitle"></h2>
+    <p id="doneMsg" style="margin:0;color:var(--muted)"></p>
+    <div class="row">
+      <button type="button" id="again">Add another</button>
+    </div>
+  </section>
+</main>
+
+<script>
+// 1) Paste your Discord webhook URL between the quotes.
+const WEBHOOK_URL = "https://discord.com/api/webhooks/1555648835605372950/XTphy4QmtUVsUn7kIatOEkrnv8kP4ygRpKFp3kEVvviPBICcjV0_wI2idS7WAHwyBceu";
+
+const $ = id => document.getElementById(id);
+const f = $("f");
+const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+
+function show(title, msg) {
+  $("doneTitle").textContent = title;
+  $("doneMsg").textContent = msg;
+  $("done").classList.add("show");
+  $("done").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+
+f.addEventListener("submit", async e => {
+  e.preventDefault();
+  const cat = $("cat").value, anim = $("anim").value.trim(), disc = $("disc").value.trim();
+  $("e1").textContent = cat ? "" : "Pick a category.";
+  $("e2").textContent = anim ? "" : "Enter the animation.";
+  $("e3").textContent = disc ? "" : "Enter your Discord.";
+  if (!cat || !anim || !disc) return;
+
+  if (!WEBHOOK_URL) { show("Webhook not set", "Add your Discord webhook URL to WEBHOOK_URL at the top of the script."); return; }
+
+  const btn = f.querySelector("button[type=submit]");
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const res = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        username: "GTAW Animations",
+        allowed_mentions: {parse: []},
+        embeds: [{
+          title: "New animation submission",
+          color: 0xe8b51a,
+          fields: [
+            {name: "Category", value: cut(cat, 1024), inline: true},
+            {name: "Discord", value: cut(disc, 1024), inline: true},
+            {name: "Animation", value: cut(anim, 1024)}
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      })
+    });
+    if (!res.ok) throw new Error("Discord returned " + res.status);
+    show("Sent", "Your animation was posted to Discord.");
+    f.reset();
+  } catch (err) {
+    show("Could not send", "Check the webhook URL and try again. (" + err.message + ")");
+  } finally {
+    btn.disabled = false; btn.textContent = "Submit animation";
+  }
+});
+
+$("again").addEventListener("click", () => {
+  f.reset(); ["e1","e2","e3"].forEach(i => $(i).textContent = "");
+  $("done").classList.remove("show"); $("cat").focus();
+});
+</script>
+</body>
+</html>
